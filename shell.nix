@@ -11,6 +11,7 @@
       core
       core_extended
       batteries
+      lambdasoup
       findlib
       utop
       merlin
