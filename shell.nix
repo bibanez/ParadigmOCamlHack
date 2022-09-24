@@ -12,6 +12,9 @@
       core_extended
       batteries
       lambdasoup
+      cohttp
+      cohttp-lwt-unix
+      lwt
       findlib
       utop
       merlin
