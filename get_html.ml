@@ -1,16 +1,7 @@
 open Lwt
 open Cohttp
 open Cohttp_lwt_unix
-    (*
-    Client.get (Uri.of_string s) >>= fun (resp, body) ->
-    let code = Code.code_of_status (Response.status resp) in
-    let code = resp |> Response.status |> Code.code_of_status in
-    Printf.printf "Response code: %d\n" code;
-    Printf.printf "Headers: %s\n" (resp |> Response.headers |> Header.to_string);
-    body |> Cohttp_lwt.Body.to_string >|= fun body ->
-    Printf.printf "Body of length: %d\n" (String.length body);
-    body
-    *)
+open Lambdasoup
 
 let get_body s =
     Client.get (Uri.of_string s) >>= fun (resp, body) ->
@@ -24,20 +15,39 @@ let remove_whitespaces s =
     in
     String.map s to_space 
 
-let print_if_wiki s =
+let add_if_wiki s =
     if String.length s > 5 
+        && not (String.equal "/wiki/Main_Page" s)
+        && not (String.contains s ':')
         && String.equal "/wiki/" (String.common_prefix2 s "/wiki/")
     then
-    print_endline s
+    Some (String.drop_prefix s 6)
+    else None
 
 let get_article s =
     Lwt_main.run (get_body ("https://en.wikipedia.org/wiki/" ^ (remove_whitespaces s)))
 
+let rec remove_duplicates l =
+  let rec contains l n =
+    match l with
+    | [] -> false
+    | h :: t ->
+      String.equal h n || contains t n
+  in
+  match l with
+  | [] -> []
+  | h :: t ->
+    let acc = remove_duplicates t in
+    if contains acc h then acc else h :: acc
+
 let print_links s =
     let soup = parse (get_article s) in
-    soup $$ "a[href]" |> iter (fun a -> print_if_wiki (R.attribute "href" a))
-
+    List.filter_map 
+        (to_list (soup $$ "a[href]")) 
+        (fun a -> add_if_wiki (R.attribute "href" a))
+    |> remove_duplicates
 (*
+    soup $$ "a[href]" |> iter (fun a -> print_if_wiki (R.attribute "href" a));
     Lwt_main.run (get_body "https://en.wikipedia.org/wiki/Special:Random")
 let get_body url =
     Printf.sprintf "%s\n" (Lwt_main.run (get_body url))
