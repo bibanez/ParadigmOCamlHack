@@ -1,7 +1,16 @@
 open Lwt
 open Cohttp
 open Cohttp_lwt_unix
-open Lambdasoup
+open Soup
+
+type 'a tree = 
+  | Leaf 
+  | Node of 'a node
+and 'a node = { 
+  value: 'a; 
+  left:  'a tree; 
+  right: 'a tree
+}
 
 let get_body s =
     Client.get (Uri.of_string s) >>= fun (resp, body) ->
@@ -13,13 +22,14 @@ let remove_whitespaces s =
         | ' ' -> '_'
         | c -> c
     in
-    String.map s to_space 
+    String.map ~f:to_space s  
 
-let add_if_wiki s =
+let add_if_wiki s original =
     if String.length s > 5 
         && not (String.equal "/wiki/Main_Page" s)
         && not (String.contains s ':')
         && String.equal "/wiki/" (String.common_prefix2 s "/wiki/")
+        && not (String.equal ("/wiki/" ^ original) s)
     then
     Some (String.drop_prefix s 6)
     else None
@@ -40,12 +50,45 @@ let rec remove_duplicates l =
     let acc = remove_duplicates t in
     if contains acc h then acc else h :: acc
 
-let print_links s =
-    let soup = parse (get_article s) in
-    List.filter_map 
-        (to_list (soup $$ "a[href]")) 
-        (fun a -> add_if_wiki (R.attribute "href" a))
-    |> remove_duplicates
+let list_links s =
+  let soup = Soup.parse (get_article s) in
+  List.filter_map 
+      ~f:(fun a -> add_if_wiki (R.attribute "href" a) s)
+      (to_list (soup $$ "a[href]")) 
+  |> remove_duplicates
+
+let rec links_tree i s =
+  let links = list_links s in
+  if i = 0 then
+    let rec acc = function
+      | [] -> Leaf
+      | h :: t -> Node {
+        value = h;
+        left  = Leaf;
+        right = acc t
+      }
+    in
+    acc links
+  else
+    let rec acc = function
+      | [] -> Leaf
+      | h :: t -> Node {
+        value = h;
+        left  = links_tree (i - 1) h;
+        right = acc t
+      }
+    in
+    acc links
+
+  
+
+(*
+let rec links_recursive i s =
+  if i = 0 then list_links s
+  else List.map ~f:(links_recursive (i-1)) (list_links s)
+ *)
+
+
 (*
     soup $$ "a[href]" |> iter (fun a -> print_if_wiki (R.attribute "href" a));
     Lwt_main.run (get_body "https://en.wikipedia.org/wiki/Special:Random")
