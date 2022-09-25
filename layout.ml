@@ -73,7 +73,7 @@ end = struct
   (* second step: build an NxN matrix storing the strength of connections
    * between articles given by their IDs *)
   type connections_matrix = int array
-  let build_connections_matrix n id_cache links_cache =
+  let build_connections_matrix n links_cache =
     let matrix : connections_matrix = Array.make (n * n) 0 in
 
     let add_connection a1 a2 =
@@ -150,10 +150,10 @@ end = struct
   let compute_layout ~get_links_function ~root ~max_depth =
     let id_cache, links_cache = create_caches ~get_links_function ~root ~max_depth in
     let n = cache_size id_cache in
-    let connections_matrix = build_connections_matrix n id_cache links_cache in
+    let connections_matrix = build_connections_matrix n links_cache in
     let particles = init_particles n in
 
-    for i = 0 to !iterations do
+    for _ = 0 to !iterations do
       move_particles n connections_matrix particles
     done;
 
