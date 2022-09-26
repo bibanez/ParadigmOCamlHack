@@ -1,7 +1,7 @@
 open Base
 
 open Lwt
-open Cohttp
+(* open Cohttp *)
 open Cohttp_lwt_unix
 open Soup
 
@@ -42,7 +42,7 @@ let rec remove_duplicates l =
 
 (*  Get html body of a given url *)
 let get_body s =
-    Client.get (Uri.of_string s) >>= fun (resp, body) ->
+    Client.get (Uri.of_string s) >>= fun (_, body) ->
     Cohttp_lwt.Body.to_string body >|= fun body ->
     body
 

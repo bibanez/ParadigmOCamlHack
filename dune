@@ -1,2 +1,8 @@
 (executable
- (name wikiscrape))
+ (name wikiscrape)
+ (libraries
+  core
+  lwt
+  cohttp
+  cohttp-lwt-unix
+  lambdasoup))
